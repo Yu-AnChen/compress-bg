@@ -69,7 +69,7 @@ def src_tif_tags(img_path):
 
 def get_img_path(img_path):
     img_path = pathlib.Path(img_path)
-    assert img_path.exists
+    assert img_path.exists()
     assert re.search(r"(?i).ome.tiff?$", img_path.name) is not None, img_path
     return img_path
 
@@ -88,7 +88,7 @@ def get_output_path(output_path, img_path):
     return output_path
 
 
-def local_entropy(img, kernel_size=9):
+def local_entropy(img, kernel_size=5):
     img = skimage.exposure.rescale_intensity(
         img, out_range=(0, INTENSITY_RESCALE_MAX)
     ).astype(np.uint16)
@@ -103,7 +103,7 @@ def make_tissue_mask(
     entropy_kernel_size: int,
     dilation_radius: int,
     plot: bool = False,
-    level_center: float = 0,
+    level_center: float = 0.5,
     level_adjust: int = 0,
 ):
     """Generates a tissue mask for an OME-TIFF image using entropy-based thresholding and morphological operations.
@@ -118,14 +118,13 @@ def make_tissue_mask(
         plot (bool, optional): If True, generates a plot of the tissue mask. Defaults to False.
         level_center (float, optional): A normalized adjustment to the thresholding level for tissue mask generation.
             The effective range of this value is dynamically clipped based on the image's entropy characteristics.
-            A practical input range is typically between -1.0 and 1.0. Defaults to 0.
+            A practical input range is typically between -1.0 and 1.0. Defaults to 0.5.
         level_adjust (int, optional): Adjustment index for threshold levels (range: -2 to 2). Defaults to 0.
 
     Returns:
         np.ndarray: A boolean NumPy array representing the generated tissue mask at the thumbnail level.
 
     Notes:
-        - The function processes only the first two channels of the input image for mask generation.
         - The `level_center` parameter is dynamically clipped internally, so its effective range may vary.
     """
     assert thumbnail_level >= 0
@@ -189,9 +188,9 @@ def make_tissue_mask(
 
 
 def entropy_img_to_masks(
-    img, entropy_img, thresholds, dilation_radius, img_is_dark_backgroud=True
+    img, entropy_img, thresholds, dilation_radius, img_is_dark_background=True
 ):
-    if not img_is_dark_backgroud:
+    if not img_is_dark_background:
         img = -1.0 * img
     masks = np.full((len(thresholds), *entropy_img.shape), fill_value=False, dtype=bool)
     footprint = skimage.morphology.disk(radius=dilation_radius)
@@ -354,6 +353,7 @@ def process_file(
 
     Args:
         img_path (str): Path to the input OME-TIFF image file.
+        channel (int): The channel to use for tissue mask generation. Defaults to 0.
         output_path (str, optional): Path to the output OME-TIFF file. If None, it defaults to
             a file in the same directory as the input image, with "-bg_compressed.ome.tif" suffix.
             If a directory is provided, the output file will be written into it. Defaults to None.
@@ -480,7 +480,7 @@ def run_batch(csv_path, print_args=True, dryrun=False, **kwargs):
             try:
                 kk_row = {}
                 for kk, vv in rr.items():
-                    if (kk in arg_types) and (vv is not None):
+                    if (kk in arg_types) and (vv is not None) and (len(str(vv).strip()) > 0):
                         try:
                             val = DefaultParseValue(vv)
                             kk_row[kk] = arg_types[kk](val)
