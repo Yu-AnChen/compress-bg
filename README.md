@@ -17,20 +17,23 @@ processing through CSV input.
   handling.
 - Preview Mode: Optionally generates preview images of tissue masks for
   verification before full processing.
+- Automatic Mask Skipping: If the detected tissue mask covers more than 90% of
+  the image area, the script automatically preserves the entire image to prevent
+  unnecessary processing or accidental data loss in full-frame images.
 
 ## How to Use
 
-### Process 1 file (`compress-bg.py run`)
+### Process 1 file (`compress-bg run`)
 
 To process a single OME-TIFF file, use the `run` sub-command.
 
-#### Command (`compress-bg.py run`)
+#### Command (`compress-bg run`)
 
 ```bash
-python compress-bg.py run --img_path <path-to-input-image> [OPTIONS]
+compress-bg run --img_path <path-to-input-image> [OPTIONS]
 ```
 
-#### Parameters (`compress-bg.py run`)
+#### Parameters (`compress-bg run`)
 
 - `img_path` (required): Path to the input OME-TIFF image file.
 - `channel` (default: 0): The channel to use for tissue mask generation.
@@ -38,7 +41,7 @@ python compress-bg.py run --img_path <path-to-input-image> [OPTIONS]
   output file will be in the same directory as the input image, the file name
   ends with `-bg_compressed.ome.tif`. If a directory is provided, it must be
   already created, and the output files will be written to it.
-- `only_preview` (default: `True`): If `True`, generates a tissue mask preview
+- `only_preview` (default: `False`): If `True`, generates a tissue mask preview
   without saving a processed image.
 - `thumbnail_level` (default: 6): Downsampling level for generating the tissue
   mask. Higher values downsample the image more.
@@ -49,38 +52,40 @@ python compress-bg.py run --img_path <path-to-input-image> [OPTIONS]
 - `dilation_radius` (default: 5): Radius (in pixels at the thumbnail level) for
   morphological dilation to refine the tissue mask.
 - `level_center` (default: 0.5): A normalized adjustment to the thresholding
-  level for tissue mask generation. While the internal implementation
-  dynamically clips this value based on image characteristics, a practical input
-  range for users is typically between -1.0 and 1.0.
+  level for tissue mask generation. A value of 0.0 corresponds to the standard
+  Otsu threshold; the default 0.5 is an optimized offset for background
+  suppression. While the internal implementation dynamically clips this value
+  based on image characteristics, a practical input range for users is typically
+  between -1.0 and 1.0.
 - `level_adjust` (default: 0): Adjustment index (see the preview visualization)
   for threshold levels (range: -2 to 2).
 - `skip_qc_plot` (default: `False`): If `True`, do not generate and save a
   tissue mask preview (JPEG) for verification.
 
-#### Example (`compress-bg.py run`)
+#### Example (`compress-bg run`)
 
 ```bash
-python compress-bg.py run --img_path input.ome.tif --output_path output.ome.tif --only_preview False --thumbnail_level 7
+compress-bg run --img_path input.ome.tif --output_path output.ome.tif --only_preview False --thumbnail_level 7
 ```
 
-### Batch Processing (`compress-bg.py run-batch`)
+### Batch Processing (`compress-bg run-batch`)
 
 To process multiple files, use the `run-batch` sub-command with a CSV input
 file.
 
-#### Command (`compress-bg.py run-batch`)
+#### Command (`compress-bg run-batch`)
 
 ```bash
-python compress-bg.py run-batch --csv_path <path-to-csv> [OPTIONS]
+compress-bg run-batch --csv_path <path-to-csv> [OPTIONS]
 ```
 
-#### CSV Format (`compress-bg.py run-batch`)
+#### CSV Format (`compress-bg run-batch`)
 
 At a minimum, the CSV file must include an **img_path** column. Additional
 columns corresponding to the options available in the single-file processing
-command (`compress-bg.py run`), such as **thumbnail_level**,
-**dilation_radius**, and others, can be included to customize the values for
-those options. Each row in the CSV represents a single processing job.
+command (`compress-bg run`), such as **thumbnail_level**, **dilation_radius**,
+and others, can be included to customize the values for those options. Each row
+in the CSV represents a single processing job.
 
 Example CSV (files-minimal.csv):
 
@@ -98,7 +103,7 @@ img_path,output_path,only_preview,thumbnail_level,img_pyramid_downscale_factor,d
 /path/to/image2.ome.tif,/path/to/output2.ome.tif,True,5,2,2,0.1,-1
 ```
 
-#### Parameters (`compress-bg.py run-batch`)
+#### Parameters (`compress-bg run-batch`)
 
 - `csv_path` (required): Path to the CSV file containing batch processing
   instructions.
@@ -109,10 +114,10 @@ img_path,output_path,only_preview,thumbnail_level,img_pyramid_downscale_factor,d
   such as `--level_center 0.2`. Note that if the same flag is also specified in
   the CSV column, the value in the CSV file will override
 
-#### Example (`compress-bg.py run-batch`)
+#### Example (`compress-bg run-batch`)
 
 ```bash
-python compress-bg.py run-batch --csv_path files-minimal.csv --output_path /path/to/output/directory --thumbnail_level 8
+compress-bg run-batch --csv_path files-minimal.csv --output_path /path/to/output/directory --thumbnail_level 8
 ```
 
 ### Generated Outputs
@@ -122,5 +127,5 @@ python compress-bg.py run-batch --csv_path files-minimal.csv --output_path /path
    the .jpg extension.
 1. Processed Image (OME-TIFF): A compressed, background-masked version of the
    input image. Metadata is preserved and updated.
-1. Log File: A log file is generated in the compress-bg-log folder within the
-   output directory.
+1. Log File: A separate log file is generated for each processed image in the
+   compress-bg-log folder within the output directory.

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compress-bg"
+dynamic = ["version"]
+authors = [{ name = "Yu-An Chen", email = "atwood12@gmail.com" }]
+description = "A command-line tool for compressing background region in a whole-slide scan from fluorescent microscopy."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "dask",
+    "fire",
+    "loguru",
+    "matplotlib",
+    "numpy",
+    "ome-types",
+    "palom",
+    "scikit-image",
+    "scipy",
+    "tifffile",
+    "zarr",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/yu-anchen/compress-bg"
+
+[project.scripts]
+cbg = "compress_bg:main"
+compress-bg = "compress_bg:main"
+
+[tool.setuptools_scm]

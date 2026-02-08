@@ -4,7 +4,9 @@ import pprint
 import re
 import time
 import traceback
+import warnings
 
+import dask.array as da
 import matplotlib.pyplot as plt
 import numpy as np
 import ome_types
@@ -117,6 +119,7 @@ def make_tissue_mask(
         dilation_radius (int): Radius (in pixels at the thumbnail level) for morphological dilation to refine the tissue mask.
         plot (bool, optional): If True, generates a plot of the tissue mask. Defaults to False.
         level_center (float, optional): A normalized adjustment to the thresholding level for tissue mask generation.
+            A value of 0.0 corresponds to the standard Otsu threshold; the default 0.5 is an optimized offset.
             The effective range of this value is dynamically clipped based on the image's entropy characteristics.
             A practical input range is typically between -1.0 and 1.0. Defaults to 0.5.
         level_adjust (int, optional): Adjustment index for threshold levels (range: -2 to 2). Defaults to 0.
@@ -308,24 +311,28 @@ def write_masked(img_path, output_path, tissue_mask, mask_upscale_factor):
     mask_full_zarr[:h, :w] = mask_full[:h, :w]
     mask_full = None
 
-    mosaic = (reader.pyramid[0] * mask_full_zarr).astype(reader.pixel_dtype)
+    mask_da = da.from_zarr(mask_full_zarr)
+    # FIXME: only writes the first channel for testing
+    mosaic = (reader.pyramid[0][:1] * mask_da).astype(reader.pixel_dtype)
 
     tif_tags = src_tif_tags(img_path)
 
     software = "compress_bg_v0"
     tif_tags["software"] = f"{tif_tags.get('software', None)}-{software}"
 
-    palom.pyramid.write_pyramid(
-        mosaics=[mosaic],
-        output_path=output_path,
-        **{
-            **dict(
-                pixel_size=reader.pixel_size,
-                kwargs_tifffile=tif_tags,
-            ),
-            **PYRAMID_DEFAULTS,
-        },
-    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=da.PerformanceWarning)
+        palom.pyramid.write_pyramid(
+            mosaics=[mosaic],
+            output_path=output_path,
+            **{
+                **dict(
+                    pixel_size=reader.pixel_size,
+                    kwargs_tifffile=tif_tags,
+                ),
+                **PYRAMID_DEFAULTS,
+            },
+        )
 
     # FIXME: this may cause mismatch when pyramid configs are different
     ome = ome_types.from_tiff(img_path)
@@ -339,7 +346,7 @@ def process_file(
     img_path: str,
     channel: int = 0,
     output_path: str = None,
-    only_preview: bool = True,
+    only_preview: bool = False,
     thumbnail_level: int = 6,
     img_pyramid_downscale_factor: int = 2,
     entropy_kernel_size: int = 5,
@@ -358,7 +365,7 @@ def process_file(
             a file in the same directory as the input image, with "-bg_compressed.ome.tif" suffix.
             If a directory is provided, the output file will be written into it. Defaults to None.
         only_preview (bool, optional): If True, only a tissue mask preview (JPEG) is generated
-            without saving the processed OME-TIFF image. Defaults to True.
+            without saving the processed OME-TIFF image. Defaults to False.
         thumbnail_level (int, optional): Downsampling level for generating the tissue mask.
             Higher values downsample the image more. Defaults to 6.
         img_pyramid_downscale_factor (int, optional): Downscaling factor for the pyramid levels
@@ -368,8 +375,9 @@ def process_file(
         dilation_radius (int, optional): Radius (in pixels at the thumbnail level) for
             morphological dilation to refine the tissue mask. Defaults to 5.
         level_center (float, optional): A normalized adjustment to the thresholding level for
-            tissue mask generation. A practical input range is typically between -1.0 and 1.0.
-            Defaults to 0.5.
+            tissue mask generation. A value of 0.0 corresponds to the standard Otsu threshold;
+            the default 0.5 is an optimized offset. A practical input range is typically
+            between -1.0 and 1.0. Defaults to 0.5.
         level_adjust (int, optional): Adjustment index for threshold levels (range: -2 to 2).
             Defaults to 0.
         skip_qc_plot (bool, optional): If True, do not generate and save a tissue mask preview
@@ -421,12 +429,13 @@ def process_file(
             plt.close(fig)
 
         if not only_preview:
-            write_masked(
-                img_path,
-                output_path,
-                tissue_mask,
-                img_pyramid_downscale_factor**thumbnail_level,
-            )
+            if not np.all(tissue_mask):
+                write_masked(
+                    img_path,
+                    output_path,
+                    tissue_mask,
+                    img_pyramid_downscale_factor**thumbnail_level,
+                )
 
         end_time = int(time.perf_counter())
         logger.info(
@@ -480,7 +489,11 @@ def run_batch(csv_path, print_args=True, dryrun=False, **kwargs):
             try:
                 kk_row = {}
                 for kk, vv in rr.items():
-                    if (kk in arg_types) and (vv is not None) and (len(str(vv).strip()) > 0):
+                    if (
+                        (kk in arg_types)
+                        and (vv is not None)
+                        and (len(str(vv).strip()) > 0)
+                    ):
                         try:
                             val = DefaultParseValue(vv)
                             kk_row[kk] = arg_types[kk](val)
