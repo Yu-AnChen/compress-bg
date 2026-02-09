@@ -1,0 +1,14 @@
+[workspace]
+authors = ["Yu-An Chen <atwood12@gmail.com>"]
+channels = ["conda-forge"]
+name = "compress-bg-env"
+platforms = ["win-64", "osx-arm64", "linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = "3.10.*"
+
+[pypi-dependencies]
+compress-bg = { git = "https://github.com/Yu-AnChen/compress-bg.git" }

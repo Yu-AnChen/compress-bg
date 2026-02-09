@@ -1,9 +1,9 @@
 # Documentation for `compress-bg`
 
-This script processes OME-TIFF image files to create compressed
-background-masked versions, using a variety of image processing techniques to
-generate tissue masks. It supports individual file processing and batch
-processing through CSV input.
+`compress-bg` is a command-line tool that processes OME-TIFF image files to
+create compressed background-masked versions, using a variety of image
+processing techniques to generate tissue masks. It supports individual file
+processing and batch processing through CSV input.
 
 ## Features
 
@@ -18,10 +18,35 @@ processing through CSV input.
 - Preview Mode: Optionally generates preview images of tissue masks for
   verification before full processing.
 - Automatic Mask Skipping: If the detected tissue mask covers more than 90% of
-  the image area, the script automatically preserves the entire image to prevent
+  the image area, the tool automatically preserves the entire image to prevent
   unnecessary processing or accidental data loss in full-frame images.
 
+## Installation
+
+### Using [pixi](https://pixi.prefix.dev/) (recommended)
+
+1. [Install pixi](https://pixi.prefix.dev/latest/installation/#__tabbed_1_2)
+2. Run the following command in command prompt or terminal:
+
+    ```bash
+    mkdir compress-bg-env && cd compress-bg-env
+
+    curl -OL https://raw.githubusercontent.com/Yu-AnChen/compress-bg/refs/heads/main/pixi/pixi.toml
+    curl -OL https://raw.githubusercontent.com/Yu-AnChen/compress-bg/refs/heads/main/pixi/pixi.lock
+    
+    pixi install
+    ```
+
+3. To run the tool, use `pixi run`:
+
+    ```bash
+    pixi run compress-bg --help
+    ```
+
 ## How to Use
+
+> **Note:** If you installed using `pixi`, prefix the commands with `pixi run`.
+> For example: `pixi run compress-bg --help`.
 
 ### Process 1 file (`compress-bg run`)
 
