@@ -312,8 +312,7 @@ def write_masked(img_path, output_path, tissue_mask, mask_upscale_factor):
     mask_full = None
 
     mask_da = da.from_zarr(mask_full_zarr)
-    # FIXME: only writes the first channel for testing
-    mosaic = (reader.pyramid[0][:1] * mask_da).astype(reader.pixel_dtype)
+    mosaic = (reader.pyramid[0] * mask_da).astype(reader.pixel_dtype)
 
     tif_tags = src_tif_tags(img_path)
 
