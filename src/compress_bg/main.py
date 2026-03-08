@@ -202,9 +202,10 @@ def entropy_img_to_masks(
         mask |= img >= np.percentile(img[mask], INTENSITY_THRESHOLD_P)
         skimage.morphology.binary_dilation(mask, footprint=footprint, out=mask)
         scipy.ndimage.binary_fill_holes(mask, output=mask)
-        skimage.morphology.remove_small_objects(
-            mask, RM_SMALL_OBJ_FACTOR * footprint.sum(), out=mask
-        )
+        if entropy_img.size > RM_SMALL_OBJ_FACTOR * footprint.sum():
+            skimage.morphology.remove_small_objects(
+                mask, RM_SMALL_OBJ_FACTOR * footprint.sum(), out=mask
+            )
 
         masks[idx] = mask
     return masks
